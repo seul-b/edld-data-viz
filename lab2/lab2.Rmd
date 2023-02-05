@@ -84,15 +84,15 @@ The plot should look like similar to the following plot (see the pdf).
 ```{r, echo=T,eval=F}
 df <- read.csv("./us census bureau regions and divisions.csv",header=TRUE)
 
-df <- df |>  rename("state" = "State.Code")
+df <- df |>  dplyr::rename("state" = "State.Code")
 
 df <- left_join(d, df)
 
 
 df2 <- df |> 
 	group_by(State, Region) |> 
-	summarise(avg = mean(totalprod)) |> 
-  arrange(desc(avg))
+	dplyr::summarise(avg = mean(totalprod)) |> 
+  dplyr::arrange(desc(avg))
 
 p4 <- df2 |> 
   ggplot(aes(x=reorder(State, avg), y=avg, fill=Region)) +
@@ -115,8 +115,8 @@ p4
 
 df3 <- df |> 
 	group_by(Region, year) |> 
-	summarise(avg = mean(totalprod)) |> 
-  arrange(desc(avg))
+	dplyr::summarise(avg = mean(totalprod)) |> 
+  dplyr::arrange(desc(avg))
 
 p5 <- df3 |> 
   ggplot(aes(x=year, y=Region, fill=avg/1e6)) +
