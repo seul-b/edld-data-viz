@@ -1,0 +1,121 @@
+---
+title: "Lab 1"
+author: "Seulbi Lee"
+date: "2023-01-23"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(needs)
+needs(rio, here, ggplot2, rvest, tidytext, tidyverse)
+```
+
+## Data
+
+We'll work with the [#tidytuesday](https://twitter.com/search?q=%23tidytuesday&src=tyah)  data for 2019, specifically the [#rstats](https://twitter.com/search?q=%23rstats&src=typd) dataset, containing nearly 500,000 tweets over a little more than a decade using that hashtag. 
+
+The data is in under Dataset tab of Week 3 module on Canvas.
+
+You can import the dataset using the code below.
+
+```{r, echo=T,eval=F}
+d <- rio::import("~/OneDrive - University Of Oregon/Year 2 (22-23)/Winter 2023/EDUC 652 Zopluoglu Dataviz/Week 3/rstats_tweets.rds",
+                 setclass = "tbl_df")
+```
+
+If you need help with processing text data, please revisit the notebook introduced in Week 1.
+
+https://www.kaggle.com/code/uocoeeds/introduction-to-textual-data
+
+### Histogram and Density plots
+
+1. Create a histogram the column `display_text_width` using the `ggplot2` package and `geom_histogram()` function. Try at least four different numbers of bins (e.g., 20, 30, 40, 50) by manipulating the `bins=` argument. Select what you think best represents the data for each. Provide a brief justification for your decision. For all plots you created, change the default background color from grayish to white.
+
+```{r, echo=TRUE, eval=TRUE}
+# knitted document wouldn't have shown the histograms without importing the rds in this chunk
+d <- rio::import("~/OneDrive - University Of Oregon/Year 2 (22-23)/Winter 2023/EDUC 652 Zopluoglu Dataviz/Week 3/rstats_tweets.rds",
+                 setclass = "tbl_df")
+
+ggplot(d, aes(y=display_text_width)) +
+  geom_histogram(bins=20) +
+  theme_bw()
+
+ggplot(d, aes(y=display_text_width)) +
+  geom_histogram(bins=30) +
+  theme_bw()
+
+ggplot(d, aes(y=display_text_width)) +
+  geom_histogram(bins=40) +
+  theme_bw()
+
+ggplot(d, aes(y=display_text_width)) +
+  geom_histogram(bins=50) +
+  theme_bw()
+```
+Answer: 40 bins seem to deliver enough information without making too many (and thin) bars because graphs with 40 and 50 bins have similar trend while those with 20 and 30 bins do not demonstrate all variance that can be observed in those with 40 and 50 bins.
+
+2. Create a density plot for the column `display_text_width` using the `ggplot2` package and `geom_density()` function. Fill the inside of density plot with a color using the `fill=` argument. Try at least four different numbers of smoothing bandwidth (e.g., 0.2, 1.5, 3, 5) by manipulating the `bw=` argument. Select what you think best represents the data for each. Provide a brief justification for your decision.
+
+```{r, echo=TRUE, eval=TRUE}
+
+# kept having an error if it wasn't imported again
+d <- rio::import("~/OneDrive - University Of Oregon/Year 2 (22-23)/Winter 2023/EDUC 652 Zopluoglu Dataviz/Week 3/rstats_tweets.rds",
+                 setclass = "tbl_df")
+
+ggplot(d, aes(display_text_width, fill="red")) +
+  geom_density(bw=0.2)
+
+ggplot(d, aes(display_text_width, fill="red")) +
+  geom_density(bw=1.5)
+
+ggplot(d, aes(display_text_width, fill="red")) +
+  geom_density(bw=3)
+
+ggplot(d, aes(display_text_width, fill="red")) +
+  geom_density(bw=5)
+```
+Answer: I would prefer bw=3 due to its adequate smoothness and inclusion of variances compared to those with bw=0.2 or 1.5.
+
+
+### Barplot
+
+3. Using the information `text` column, create the following figure of the 15 most common words represented in these posts by using the `ggplot2()` package and `geom_col()` function. Remove the stop words, and also exclude the words such as 't.co','https','http','rt','rstats'.
+
+```{r,echo=TRUE,eval=TRUE}
+df <- tibble(
+  paragraph = seq_along(d$text),
+  text = d$text
+)
+
+tidy_words <- df %>% 
+  unnest_tokens(word, text)
+
+tidy_words %>% 
+  count(word, sort = TRUE)
+
+stop_words
+
+remove_words <- c('t.co','https','http','rt','rstats')
+
+cool_graph <-
+tidy_words %>% 
+  anti_join(stop_words) %>%
+  count(word, sort = TRUE) %>% 
+  filter(!word %in% c('t.co','https','http','rt','rstats')) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  slice(1:15) %>% 
+  ggplot(aes(n, word)) +
+    geom_col(fill = "#5A5A5A")+
+    theme_bw()
+
+```
+
+4. Style the plot so it (mostly) matches the below. It does not need to be exact, but it should be close.
+
+```{r, echo=TRUE,eval=TRUE}
+
+cool_graph
+
+```
