@@ -1,0 +1,225 @@
+---
+title: "Final Project"
+author: "Seulbi Lee"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+require(DT)
+require(readr)
+require(tidyverse)
+require(data.table)
+require(ggplot2)
+require(purrr)
+require(ggmap)
+require(graphics)
+
+aq <- read_csv("data/AQ_SubScales.csv")
+exp1 <- read_csv("data/datadryad_clear98_aq.csv")
+exp2 <- read_csv("data/datadryad_movie70_aq.csv")
+
+```
+
+
+```{r V1 load image}
+
+library(imager)
+im <- load.image("data/image.jpg")
+plot(im) 
+
+# 1. From images to pixsets and back
+
+px <- im > .6
+px
+
+plot(px)
+str(px)
+all(dim(px) == dim(im))
+sum(px)  ## Number of pixels in set
+mean(px) ## Proportion
+
+## Converting a pixset to an image results in an image of the same size with zeroes and ones:
+as.cimg(px)
+
+# 2. Indexing using pixsets
+mean(im[px])
+mean(im[!px])
+which(px) %>% head
+
+# 3. Plotting and visualizing pixsets
+plot(im)
+px <- (isoblur(im, 5)  > .5 )
+highlight(px)
+
+# 4. Coordinates for pixels in pixsets
+imager::where(px) %>% head
+imager::where(px) %>%
+  dplyr::summarise(mx=mean(x),my=mean(y))
+
+# 5. Selecting contiguous regions, splitting into contiguous regions
+plot(im)
+abline(a=10, b=0, lwd=2)
+px.flood(im, x=1000, y=700, sigma=.1) %>%
+  highlight
+
+locator(im)
+```
+
+```{r}
+
+df <- data.frame(x=exp1$x, y=exp1$y)
+
+library(jpeg)
+library(png)
+plot(1:2, type='n', main="", xlab="x", ylab="y")
+
+lim <-par()
+rasterImage(im, 
+            xleft=1, xright=2, 
+            ybottom=1.3, ytop=1.7)
+grid()
+
+#example1
+library(ggplot2)
+data(hadley, package="ggmap")
+img <- hadley
+set.seed(1)      # for reproducible example
+df  <- data.frame(x=rnorm(100,mean=c(150,250),sd=25),
+                  y=rnorm(100,mean=480, sd=20))
+
+ggplot(df, aes(x,y))  + 
+  annotation_raster(img, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf)+
+  stat_density2d(geom = "polygon", aes(fill=..level..)) + 
+  geom_point(size=0.5)+
+  scale_fill_gradient(low="green",high="red") + 
+  scale_x_continuous(limits=c(0,dim(img)[2]),expand=c(0,0))+
+  scale_y_continuous(limits=c(0,dim(img)[1]),expand=c(0,0))+
+  coord_fixed()
+
+
+
+
+```
+
+```{r V2 datatable, eval=TRUE}
+
+exp <- exp1[c(2,6,7,11:15,18,19)]
+aq <- rename(aq, Code=code)
+exp <- left_join(exp, aq[-c(2)])
+
+datatable(exp, rownames=FALSE, colnames=c('Sub','FixDur', 'NumFix','PC_Eyes','PC_Mouth','PC_Off',
+                                            'Code','AQ', 'Social Skill','Attention Switching',
+                                            'Attention to Detail','Communication','Imagination'),
+          filter='top',  option = list(searching = FALSE, pageLength=10, autoWidth=TRUE,
+                                       columnDefs = list(list(targets = c(0), searchable = FALSE))))
+```
+
+
+```{r shinyapp setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+require(shiny)
+require(randomForest)
+require(tidyverse)
+require(mice)
+require(DT)
+```
+
+## 1. Test
+
+### 1.1 User Interface Test
+```{r shiny user interface, eval=TRUE}
+ui_bar_before <- shinyUI(fluidPage(
+  sidebarLayout(
+    sidebarPanel(
+      h3("Filter"),
+      sliderInput("PC_Eyes", label = "PC_Eyes :",
+                  min = 0, max = 1, value = c(0,1)), 
+      sliderInput("PC_Off", label = "PC_Off :",
+                  min = 0, max = 1, value = c(0,1)),
+      sliderInput("AQ", label = "AQ Score",
+                  min = 0, max = 50, value = c(0,50)),
+      selectInput("Sub", "Sub", choices = c(1:70))
+
+      # radioButtons("Sub", "Sub",
+      #              choices = exp$Sub %>% unique()),
+      # numericInput("AQ", "AQ Score", min = 7, max = 35, value = 35)
+      ),
+        mainPanel(
+      h3("Table View"),
+      DTOutput("table_raw")
+      # ,
+      # h3("Student's Score is in"),
+      # DTOutput("table_std"),
+      # textOutput("student")
+      # ,
+      # tags$head(tags$style("#student{font-size: 20px;
+      #                            font-style: italic;
+      #                            color: blue;
+      #                            }"
+      #                    )
+      #         ),
+      # tags$head(tags$style("h2 {font-size: 20px;
+      #                            font-style: italic;
+      #                            color: blue;
+      #                            }"
+      #                    )
+      #         ),
+      #h3("Image sample"),
+      #plotOutput("image1")
+      )
+    )
+))
+
+
+```
+
+### 1.2 Server Test
+```{r, server}
+
+server <- shinyServer(function(input, output){
+   output$table_raw <- renderDT({
+    exp  %>% 
+       filter(PC_Eyes >= input$PC_Eyes[1] & PC_Eyes <= input$PC_Eyes[2], 
+              PC_Off >= input$PC_Off[1] & PC_Off <= input$PC_Off[2],
+              AQ >= input$AQ[1] & AQ <= input$AQ[2],
+              Sub == input$Sub)
+     # %>% 
+        # rename(`Score Above` = PC_Eyes, `Below` = PC_Off, `Percentile Rank` = PercentileRank)
+   }, options= list(searching = FALSE, pageLength=10, autoWidth=TRUE,
+                                       columnDefs = list(list(targets = c(0), searchable = FALSE))),
+    rownames= FALSE)
+   
+   # exp_select <- reactive({
+   #  exp %>% 
+   #     filter(PC_Off >= input$Sub, Sub %in% input$Sub) %>% head(1) 
+     # %>% 
+       # rename(`Score Above` = PC_Eyes, `Below` = PC_Off, `Percentile Rank` = PercentileRank)
+ # })
+   output$table_std <- renderDT({
+     exp()
+     }, options= list(searching = FALSE, pageLength=5, autoWidth=TRUE,
+                                       columnDefs = list(list(targets = c(0), searchable = FALSE))),
+     rownames= FALSE)
+})
+# output$student <- renderText({
+#   paste("This student performed better than ", (exp_select()$`Percentile Rank`),            "% of their peers in Grade ", input$Grade)
+#  })
+#    output$image1 <- renderPlot({
+#      plot(density(rnorm(100,50,10), adjust = 5))+
+# #     pr %>% filter(Grade %in% input$Grade) %>%
+# #       ggplot(aes(x=From, y = PercentileRank)) + geom_col() +
+#        geom_vline(xintercept = exp_select()$`Percentile Rank`, color = 'red') +
+#        geom_text(aes(x=exp_select()$`Percentile Rank`, y=80, label = "Student's Score"), color = 'red') +
+#        theme_bw()
+#    })
+# })
+
+```
+
+### 1.3 Open ShinyApp 
+```{r, eval=FALSE}
+shinyApp(ui = ui_bar_before, server = server)
+
+```

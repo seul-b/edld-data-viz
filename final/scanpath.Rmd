@@ -1,0 +1,36 @@
+---
+title: "scanpath"
+author: "Seulbi Lee"
+date: "2023-02-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#devtools::install_github("tmalsburg/scanpath/scanpath", dependencies=TRUE)
+library(scanpath)
+library(tidyverse)
+library(magrittr)
+library(scanpath)
+
+require(readr)
+df <- list.files(path="data/dataset_normalised_5mins/BROWSE",
+                 pattern = "*.csv", full.names = TRUE) %>% 
+  lapply(read_csv) %>% 
+  bind_rows
+```
+
+```{r}
+diff <- tail(df$timestamp, 214127) 
+diff <- append(diff, NA)
+df$diff <- diff
+
+df$duration <- df$diff - df$timestamp
+
+df <- drop_na(df)
+
+p <- plot_scanpaths(df, duration ~ x + y | participant, set)
+
+p + ggplot2::theme(legend.position="none")
+```
