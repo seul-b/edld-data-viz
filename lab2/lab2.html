@@ -440,15 +440,15 @@ from.</li>
 pdf).</p>
 <pre class="r"><code>df &lt;- read.csv(&quot;./us census bureau regions and divisions.csv&quot;,header=TRUE)
 
-df &lt;- df |&gt;  rename(&quot;state&quot; = &quot;State.Code&quot;)
+df &lt;- df |&gt;  dplyr::rename(&quot;state&quot; = &quot;State.Code&quot;)
 
 df &lt;- left_join(d, df)
 
 
 df2 &lt;- df |&gt; 
     group_by(State, Region) |&gt; 
-    summarise(avg = mean(totalprod)) |&gt; 
-  arrange(desc(avg))
+    dplyr::summarise(avg = mean(totalprod)) |&gt; 
+  dplyr::arrange(desc(avg))
 
 p4 &lt;- df2 |&gt; 
   ggplot(aes(x=reorder(State, avg), y=avg, fill=Region)) +
@@ -469,8 +469,8 @@ plot should look like similar to the following plot (see the pdf).</li>
 </ol>
 <pre class="r"><code>df3 &lt;- df |&gt; 
     group_by(Region, year) |&gt; 
-    summarise(avg = mean(totalprod)) |&gt; 
-  arrange(desc(avg))
+    dplyr::summarise(avg = mean(totalprod)) |&gt; 
+  dplyr::arrange(desc(avg))
 
 p5 &lt;- df3 |&gt; 
   ggplot(aes(x=year, y=Region, fill=avg/1e6)) +
@@ -509,7 +509,7 @@ all states, but just have them not be filled according to your fill
 scale if there is no data.</p>
 <p>For instance, below is a plot created based on this data for
 inspiration (see the pdf).</p>
-<p>Example 1:</p>
+<p><strong>Example 1</strong></p>
 <pre class="r"><code>honey_subset &lt;- df %&gt;%
   select(&quot;iso_3166_2&quot; = &quot;state&quot;, year, totalprod)
 
@@ -533,7 +533,7 @@ eg &lt;- ggplot(honey_geo) +
         legend.key.size = unit(2, &#39;cm&#39;),
         legend.key.height = unit(.5,&quot;cm&quot;),
         axis.text.x = element_text(size = 5))</code></pre>
-<p>Practice 1</p>
+<p><strong>Practice 1</strong></p>
 <pre class="r"><code>devtools::install_github(&#39;thomasp85/gganimate&#39;)
 
 prac &lt;- ggplot(df, aes(yieldpercol,totalprod, size=priceperlb, colour=state)) +

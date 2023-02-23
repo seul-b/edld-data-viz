@@ -1,0 +1,129 @@
+---
+title: "Lab 4"
+author: "Seulbi Lee"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output:
+  pdf_document: default
+header-includes:
+  - \usepackage{booktabs}
+  - \usepackage{lscape}
+  - \newcommand{\blandscape}{\begin{landscape}}
+  - \newcommand{\elandscape}{\end{landscape}}
+  - \usepackage{float}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE,
+                      warning = FALSE,
+                      fig.width = 10,
+                      fig.height = 10)
+
+```
+
+## Getting Started
+
+You can download the `transit_cost.csv` data from the website.
+
+```{r,eval=TRUE,echo=TRUE}
+
+require(tidyverse)
+require(lubridate)
+require(ungeviz)
+require(dviz.supp)
+require(ggtext)
+require(countrycode)
+require(plotrix)
+
+transit_cost <- read_csv('./transit_cost.csv')
+```
+
+## Question 1
+
+Use the transit costs data to reproduce the following plot. To do so, you will need to do a small amount of data cleaning, then calculate the means and  standard errors (of the mean) for each country. Please filter to only counties with at least three observations. To use actual country names, rather than abbreviations, join your dataset with the output from the following
+
+```{r eval = TRUE, echo = TRUE}
+country_codes <- countrycode::codelist %>% 
+  select(country_name = country.name.en, country = ecb)
+
+transit_cost <- left_join(transit_cost, country_codes) |> drop_na()
+transit_cost[is.na(transit_cost)] <- 0
+
+str(transit_cost)
+transit_cost$real_cost <- as.numeric(transit_cost$real_cost)
+
+
+transit_mean <- aggregate(transit_cost$real_cost, list(transit_cost$country), FUN=mean)
+colnames(transit_mean)[colnames(transit_mean) == "Group.1"] ="country"
+colnames(transit_mean)[colnames(transit_mean) == "x"] ="mean"
+
+transit_error <- aggregate(transit_cost$real_cost, list(transit_cost$country), FUN=std.error)
+colnames(transit_error)[colnames(transit_error) == "Group.1"] ="country"
+colnames(transit_error)[colnames(transit_error) == "x"] ="std.error"
+
+transit_new <- left_join(transit_mean, transit_error)
+
+dat <- left_join(transit_cost, transit_new)
+
+table(dat$country)
+
+dat <- subset(dat, country %in% c('AT','AU','BD','BG','BR','CA','CH','CN','DE','ES','FR','GR','IN','IT','JP','KR','PA','PH','PL','RU','SA','SE','SG','TH','TR','TW','UA','US','UZ','VN')) |> 
+  arrange(desc(mean))
+
+```
+
+```{r,echo=TRUE,eval=TRUE}
+dat |> 
+  ggplot(aes(x=stats::reorder(country_name, mean), y= mean)) +
+    geom_point(color="blue")+
+    geom_linerange(aes(ymin=mean-std.error,
+                      ymax=mean+std.error),
+                  width=0.5, size=0.5)+
+    coord_flip()+
+    labs(title="Cost to build transit systems vary across countries", 
+         x="Country", y="Real Cost (In millions of dollars)", 
+         caption="Data provided through #tidytuesday by the Transit Costs Project") +
+    theme(legend.position='none', 
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_line(colour = "grey90"),
+          panel.background = element_blank(),
+          plot.caption = element_text(hjust=0.5)) +
+  ylim(0, 30000) 
+
+```
+
+## Question 2
+
+A local news source reported on Nov 3, 2022, that the percentage of voters supporting Measure 114 was 46.1%. This estimate was based on only 577 voters; therefore, it has a margin of error of 4.1%.
+
+Assume that the margin of error represents twice the standard error of the percentage estimate. Based on this information, create a quantile dot plot to represent the probability that Measure 114 would pass (more than 50% of all voters would support it ).
+
+**Source:** [Oregon gun control Measure 114 polls closely](https://www.kgw.com/article/news/crime/gun-violence/measure-114-oregon-poll-results-gun-control-close/283-c342776d-f3b3-4799-ba76-061424bbd62e)
+
+```{r,echo=TRUE,eval=TRUE}
+mu  <- 0.461
+std <- 0.41/2 # margin of error 0.41 = 2 * std 
+    
+x <- seq(0.01,.99,.05) # generate a sequence of probabilities
+                       # from 1% to 99% by 1% increments
+
+# Quantile data frame based on normal distribution
+
+  q_df <- data.frame(x = x,
+                     q = qnorm(x, mu, std)) 
+  
+  q_df$winner <- ifelse(q_df$q < .5,"#f8f1a9","#b1daf4")
+  
+  q_df
+
+  ggplot(q_df, aes(q)) +
+    geom_dotplot(aes(fill=winner), binwidth = 0.1)+
+    theme_minimal()+
+    geom_vline(xintercept = 0.5, 
+               color = "gray", 
+               linetype = "dashed", 
+               size = 1)+
+    scale_fill_identity(guide='none')+
+    scale_y_continuous(name = "", 
+                       breaks = NULL)
+
+```

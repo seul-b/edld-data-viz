@@ -1,7 +1,7 @@
 ---
 title: "Lab 3"
 author: "Seulbi Lee"
-date: "2023-02-24"
+date: "2023-02-11"
 output:
   pdf_document: default
 ---
@@ -27,7 +27,7 @@ require(ggrepel)
 require(ggforce)
 library(dplyr)
 
-df <- read_csv('./transit_cost.csv') |> drop_na()
+df <- read_csv('./transit_cost.csv') %>% drop_na()
 ```
 
 ## Question 1
@@ -50,8 +50,10 @@ Suppose that you want to demonstrate the relationship between Average Length and
 
 8. Adjust the theme settings.
 
+
 ```{r}
-#1. Compute the average length and average cost of transit systems by country and city
+
+# Compute the average length and average cost of transit systems by country and city
 
 df$length <- as.numeric(df$length)
 
@@ -79,29 +81,107 @@ df2 <- left_join(cost_city, cost_country)
 
 library(plyr)
 df <- join_all(list(df, df1,df2), type='left')
+```
 
 
-#2-8.
+
+
+```{r}
+
+# Ver.1
+# Looks okay except for the legend, so I try another.
+
 library(ggtext)
-lab <- "<span style = 'color:purple'>India</span> has among the most transit systems in the world"
+lab <- "<span style='color:#A020F0;'>India</span>has among the most transit systems in the world"
+
 
 p1 <-
   ggplot(df, aes(x=city_avg_length, y=city_avg_cost,
                  label=ifelse(country == "IN", city, ""))) + 
-  geom_text_repel()+
+  geom_text_repel(stat="identity")+
   geom_point(aes(size=city), alpha=.8, 
              color=ifelse(df$country == "IN","purple", "grey70")) +
   scale_x_log10()+
   scale_y_log10()+
-  labs(title="Longer transit systems tend to cost more", subtitle= geom_richtext(aes(label = lab)), x="Average Length", y="Average Cost", caption="Note the axes are on the log scale")+
-  theme(legend.position='bottom') 
+  labs(title="**Longer transit systems tend to cost more**<br>", 
+       subtitle="<span style='color:#A020F0;'>India</span> has among the most transit systems in the world", 
+       x="Average Length", y="Average Cost", 
+       caption="Note the axes are on the log scale") +
+  theme(legend.position='bottom', panel.background=element_rect(fill="white"), 
+        panel.grid.major = element_line(colour = "grey90"), panel.grid.minor =element_line(colour = "grey90"),
+        plot.title=element_markdown(), plot.subtitle=element_markdown())
 
 p1
 
-#to do: 4 + subtitle color + legend
+p1 + theme(legend.position = 'none')
+
+```
+
+```{r}
+
+# Ver. 2
+# This time, I just made another column for the number of transit per city. It looks okay, but I don't know why the y axis looks weird. Plus, scale_y_log10() and setting purple color to legend don't seem working here.
+
+df$count <- df %>% 
+  dplyr::group_by(city) %>% 
+  dplyr::mutate(count = n())
+
+options(scipen=999)
+
+p2 <-
+  ggplot(df, aes(x=city_avg_length, y=city_avg_cost,
+                 label=ifelse(country == "IN", city, ""))) + 
+  geom_point(aes(size=count$count), alpha=.8, 
+             color=ifelse(df$country == "IN","purple", "grey70")) +
+  geom_text_repel()+
+  scale_size_binned(breaks = c(5, 10, 20))+
+  scale_x_log10()+
+  scale_y_log10()+
+  # scale_y_continuous()+
+  labs(title="**Longer transit systems tend to cost more**<br>", 
+       subtitle="<span style='color:#A020F0;'>India</span> has among the most transit systems in the world", 
+       x="Average Length", y="Average Cost", 
+       caption="Note the axes are on the log scale") +
+  theme(legend.position='bottom', panel.background=element_rect(fill="white"), 
+        panel.grid.major = element_line(colour = "grey90"), panel.grid.minor =element_line(colour = "grey90"), 
+        plot.title=element_markdown(), plot.subtitle=element_markdown())
+
+
+p2
 
 
 ```
+
+
+```{r}
+
+# Ver. 3
+# geom_text instead of geom_text_repel() solves the dupilicated labels.
+
+p3 <-
+  ggplot(df, aes(x=city_avg_length, y=city_avg_cost,
+                 label=ifelse(country == "IN", city, ""))) + 
+  geom_point(aes(size=count$count), alpha=.8, 
+             color=ifelse(df$country == "IN","purple", "grey70")) +
+  geom_text(data=df |> dplyr::filter(country == "IN"), aes(label=city), check_overlap = TRUE, nudge_y = 0.05) +
+  scale_size_binned(breaks = c(5, 10, 20))+
+  scale_x_log10()+
+  scale_y_log10()+
+  # scale_y_continuous()+
+  labs(title="**Longer transit systems tend to cost more**<br>", 
+       subtitle="<span style='color:#A020F0;'>India</span> has among the most transit systems in the world", 
+       x="Average Length", y="Average Cost", 
+       caption="Note the axes are on the log scale") +
+  theme(legend.position='bottom', panel.background=element_rect(fill="white"), 
+        panel.grid.major = element_line(colour = "grey90"), panel.grid.minor =element_line(colour = "grey90"), 
+        plot.title=element_markdown(), plot.subtitle=element_markdown())
+
+
+p3
+
+
+```
+
 
 
 \pagebreak
@@ -130,22 +210,59 @@ Using basically the same data, reproduce the following plot on the next page.
 
 ```{r}
 
-p2 <-
+# Ver.1 
+# Everything works but legend is not like what I want again
+
+p3 <-
   ggplot(df, aes(x=city_avg_length, y=city_avg_cost,
                  label=ifelse(country == "US", city, ""))) + 
-  geom_text_repel()+
+  # geom_text_repel()+
+  geom_mark_ellipse(aes(color=country, label="United States", filter = country == "US")) +
   geom_point(aes(size=city), alpha=.8, 
-             color=ifelse(df$country == "US","blue", "grey70")) +
+             color=ifelse(df$country == "US","skyblue", "grey70")) +
   scale_x_log10()+
   scale_y_log10()+
-  geom_mark_ellipse(aes(color=country, label=country, filter = country == "US")) +
-  geom_label(data=df |> dplyr::filter(country == "US"), aes(label=city), check_overlap = TRUE)+
-  labs(title="Longer transit systems tend to cost more", subtitle="United States has the most expensive transit systems (average cost per average length)", x="Average length", y="Average cost", caption="Note the axes are on the log scale")+
-  theme(legend.position='none') 
+  geom_label(data=df |> dplyr::filter(country == "US"),
+             aes(label=city), 
+             check_overlap = TRUE, nudge_y = 0.05) +
+  labs(title="**Longer transit systems tend to cost more**<br>", 
+       subtitle="United States has the most expensive transit systems (average cost per average length)", 
+       x="Average length", y="Average cost", caption="Note the axes are on the log scale")+
+  theme_minimal()+
+  theme(plot.title=element_markdown(), legend.position = 'bottom')
 
-p2
-
-#4  
+p3
 
 ```
 
+```{r}
+
+# Ver.2
+
+p4 <-
+  ggplot(df, aes(x=city_avg_length, y=city_avg_cost,
+                 label=ifelse(country == "US", city, ""))) + 
+  # geom_text_repel()+
+  geom_mark_ellipse(aes(color=country,label="United States", filter = country == "US")) +
+  geom_point(aes(size=count$count), alpha=.8, 
+             color=ifelse(df$country == "US","skyblue", "grey70")) +
+  scale_x_log10()+
+  scale_y_log10()+
+  geom_label(data=df |> dplyr::filter(country == "US"), aes(label=city), check_overlap = TRUE, nudge_y = 0.05) +
+  labs(title="**Longer transit systems tend to cost more**<br>", 
+       subtitle="United States has the most expensive transit systems (average cost per average length)", 
+       x="Average length", y="Average cost", caption="Note the axes are on the log scale")+
+  theme_minimal()+
+  theme(plot.title=element_markdown(), legend.position = 'bottom')
+
+
+# This would make y axis as we want, but so much space above
+p4 + scale_y_continuous(breaks=c(1000,10000,100000))
+
+
+# scale_y_log() doesn't seem compatible with scale_y_continuous 
+# that would help me setting the y axis break
+p4 + scale_y_continuous(breaks=c(1000,10000,100000)) +
+  scale_y_log10()
+
+```

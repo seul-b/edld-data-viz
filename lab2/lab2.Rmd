@@ -24,7 +24,7 @@ The data is in under Dataset tab of Week 4 module on Canvas.
 
 You can import the dataset using the code below.
 
-```{r, echo=T,eval=F, include=T, }
+```{r, echo=T,eval=F, include=T}
 d <- read.csv("./honeyproduction.csv", header=TRUE)
 ```
 
@@ -81,7 +81,7 @@ p3
 
 The plot should look like similar to the following plot (see the pdf).
 
-```{r, echo=T,eval=F}
+```{r, echo=T, eval=F}
 df <- read.csv("./us census bureau regions and divisions.csv",header=TRUE)
 
 df <- df |>  dplyr::rename("state" = "State.Code")
